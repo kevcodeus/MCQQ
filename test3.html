@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test 1 - MCQ Platform</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Additional styles for better UI */
+        .results-section {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .correct-answers {
+            border-left: 5px solid #4CAF50; /* Green border for correct answers */
+            background-color: #e8f5e9; /* Light green background */
+        }
+
+        .incorrect-answers {
+            border-left: 5px solid #f44336; /* Red border for incorrect answers */
+            background-color: #ffebee; /* Light red background */
+        }
+
+        .results-section h3 {
+            margin-top: 0;
+            font-size: 1.5em;
+            color: #333;
+        }
+
+        .results-section ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .results-section li {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-section li strong {
+            color: #333;
+        }
+
+        .results-section li .user-answer {
+            color: #f44336; /* Red for incorrect answers */
+        }
+
+        .results-section li .correct-answer {
+            color: #4CAF50; /* Green for correct answers */
+        }
+
+        .submit-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+
+        /* Custom colors for Previous and Skip buttons */
+        .prev-btn {
+            background-color: #f44336; /* Red for Previous button */
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        .prev-btn:hover {
+            background-color: #e53935; /* Darker red on hover */
+        }
+
+        .skip-btn {
+            background-color: #f6df069e; /* Yellow for Skip button */
+            color: rgb(255, 255, 255);
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        .skip-btn:hover {
+            background-color: #fdd835; /* Darker yellow on hover */
+        }
+
+        /* Highlighting colors for correct and incorrect answers */
+        .correct {
+            color: #4CAF50; /* Green for correct answers */
+        }
+
+        .incorrect {
+            color: #f44336; /* Red for incorrect answers */
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <div class="nav-container">
+            <div class="logo"><a href="index.html"> MCQ Test Platform</a></div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="scores.html">Test Scores</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="glass-card">
+            <h1>Test 1: Multiple Choice Questions</h1>
+            <div id="test-progress">
+                <div id="progress-bar">
+                    <div id="progress-fill"></div>
+                </div>
+                <div id="progress-text">Question 0/0</div>
+            </div>
+            <div id="questions-container">
+                <div id="loading">Loading questions...</div>
+            </div>
+            <div id="navigation-buttons">
+                <button id="prev-btn" class="prev-btn" disabled>Previous</button>
+                <button id="skip-btn" class="skip-btn">Skip</button>
+                <button id="submit-qn-btn" class="submit-btn">Submit</button>
+                <button id="next-btn" class="nav-btn">Next</button>
+                <button id="final-submit-btn" class="submit-btn" style="display: none;">Final Submit</button>
+            </div>
+            <div id="results-container" style="display: none;">
+                <h2>Test Results</h2>
+                <div class="results-section correct-answers">
+                    <h3>✅ Correct Answers</h3>
+                    <div id="correct-answers"></div>
+                </div>
+                <div class="results-section incorrect-answers">
+                    <h3>❌ Incorrect Answers</h3>
+                    <div id="incorrect-answers"></div>
+                </div>
+                <a href="scores.html" class="submit-btn" style="margin-top: 20px; display: inline-block;">View All Scores</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+    const questionsContainer = document.getElementById('questions-container');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const skipBtn = document.getElementById('skip-btn');
+    const submitQnBtn = document.getElementById('submit-qn-btn');
+    const finalSubmitBtn = document.getElementById('final-submit-btn');
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    const resultsContainer = document.getElementById('results-container');
+    const correctAnswersDiv = document.getElementById('correct-answers');
+    const incorrectAnswersDiv = document.getElementById('incorrect-answers');
+    const skippedCountDisplay = document.createElement('div'); // Display skipped count
+    skippedCountDisplay.id = 'skipped-count';
+    skippedCountDisplay.style.marginTop = '10px';
+    skippedCountDisplay.style.fontSize = '1.2em';
+    skippedCountDisplay.style.color = '#ff9800'; // Yellow color for skipped count
+    document.querySelector('.glass-card').appendChild(skippedCountDisplay);
+    
+    let currentQuestionIndex = 0;
+    let questions = [];
+    let userAnswers = {};
+    let skippedQuestions = []; // Track skipped questions
+    let skippedCount = 0; // Track the number of skipped questions
+    
+    fetch('test3.md')
+        .then(response => response.text())
+        .then(markdownText => {
+            parseQuestions(markdownText);
+            if (questions.length > 0) {
+                displayQuestion(currentQuestionIndex);
+                updateSkippedCount(); // Initialize skipped count display
+            } else {
+                questionsContainer.innerHTML = '<p class="error">No questions found in the file.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading questions:', error);
+            questionsContainer.innerHTML = '<p class="error">Failed to load questions. Please try again later.</p>';
+        });
+
+    function parseQuestions(markdownText) {
+        const questionBlocks = markdownText.match(/\*\*Q\d+:.*?(?=\*\*Q\d+:|## Question \d+|$)/gs) || [];
+        questions = questionBlocks.map((block, index) => {
+            const lines = block.split('\n');
+            const questionText = lines[0].replace(/\*\*Q\d+:\s*/, '').trim();
+            const options = lines.filter(line => /^[A-D]\)/.test(line)).map(option => option.trim());
+            const correctAnswerMatch = block.match(/Answer:\s*([A-D])\)/);
+            const correctAnswer = correctAnswerMatch ? correctAnswerMatch[1] : null;
+
+            return {
+                number: index + 1,
+                text: questionText,
+                options: options,
+                correctAnswer: correctAnswer,
+                answered: false,
+                skipped: false,
+                submitted: false // Track if the question has been submitted
+            };
+        });
+    }
+    
+    function displayQuestion(index) {
+        if (questions.length === 0) return;
+        const question = questions[index];
+        
+        let html = `
+            <div class="question">
+                <h2>Question ${question.number}</h2>
+                <p>${question.text}</p>
+                <div class="options">
+        `;
+        
+        question.options.forEach(option => {
+            const optionLetter = option.charAt(0);
+            const optionText = option.substring(3);
+            const checked = userAnswers[question.number] === optionLetter ? 'checked' : '';
+            const correctClass = question.answered && optionLetter === question.correctAnswer ? 'correct' : '';
+            const incorrectClass = question.answered && userAnswers[question.number] === optionLetter && optionLetter !== question.correctAnswer ? 'incorrect' : '';
+            const disabled = question.submitted ? 'disabled' : '';
+            
+            html += `
+                <div class="option">
+                    <input type="radio" id="q${question.number}_${optionLetter}" 
+                        name="q${question.number}" value="${optionLetter}" ${checked} ${disabled}>
+                    <label for="q${question.number}_${optionLetter}" class="${correctClass} ${incorrectClass}">
+                        <span class="option-letter">${optionLetter}</span> ${optionText}
+                    </label>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        questionsContainer.innerHTML = html;
+        
+        document.querySelectorAll(`input[name="q${question.number}"]`).forEach(radio => {
+            radio.addEventListener('change', function() {
+                userAnswers[question.number] = this.value;
+                updateProgressBar();
+            });
+        });
+        
+        prevBtn.disabled = index === 0;
+        skipBtn.style.display = question.skipped || question.submitted ? 'none' : 'inline-block';
+        submitQnBtn.style.display = !question.submitted ? 'inline-block' : 'none';
+        nextBtn.style.display = question.submitted ? 'inline-block' : 'none';
+        finalSubmitBtn.style.display = areAllQuestionsAnswered() ? 'inline-block' : 'none';
+        
+        updateProgressBar();
+    }
+    
+    function updateProgressBar() {
+        const totalQuestions = questions.length;
+        const answeredQuestions = Object.keys(userAnswers).length;
+        
+        progressText.textContent = `Question ${currentQuestionIndex + 1}/${totalQuestions} | Answered: ${answeredQuestions}/${totalQuestions}`;
+        progressFill.style.width = `${(answeredQuestions / totalQuestions) * 100}%`;
+    }
+    
+    function updateSkippedCount() {
+        skippedCount = questions.filter(question => question.skipped && !question.answered).length;
+        skippedCountDisplay.textContent = `Skipped Remaining: ${skippedCount}`;
+        skippedCountDisplay.style.color = "red";
+    }
+    
+    function findNextSkippedOrUnansweredQuestion() {
+        let nextIndex = currentQuestionIndex + 1;
+        while (nextIndex < questions.length) {
+            const nextQuestion = questions[nextIndex];
+            if ((nextQuestion.skipped || !nextQuestion.answered) && !nextQuestion.submitted) {
+                return nextIndex;
+            }
+            nextIndex++;
+        }
+        // If no more skipped or unanswered questions are found after the current question, loop back to the beginning
+        nextIndex = 0;
+        while (nextIndex < currentQuestionIndex) {
+            const nextQuestion = questions[nextIndex];
+            if ((nextQuestion.skipped || !nextQuestion.answered) && !nextQuestion.submitted) {
+                return nextIndex;
+            }
+            nextIndex++;
+        }
+        return -1; // No more skipped or unanswered questions
+    }
+    
+    prevBtn.addEventListener('click', function() {
+        if (currentQuestionIndex > 0) {
+            currentQuestionIndex--;
+            displayQuestion(currentQuestionIndex);
+        }
+    });
+    
+    nextBtn.addEventListener('click', function() {
+        const nextIndex = findNextSkippedOrUnansweredQuestion();
+        if (nextIndex !== -1) {
+            currentQuestionIndex = nextIndex;
+            displayQuestion(currentQuestionIndex);
+        } else {
+            alert('No more skipped or unanswered questions.');
+        }
+    });
+    
+    skipBtn.addEventListener('click', function() {
+        const question = questions[currentQuestionIndex];
+        question.skipped = true;
+        skippedQuestions.push(question.number);
+        updateSkippedCount(); // Update skipped count
+
+        // Move to the next skipped or unanswered question
+        const nextIndex = findNextSkippedOrUnansweredQuestion();
+        if (nextIndex !== -1) {
+            currentQuestionIndex = nextIndex;
+            displayQuestion(currentQuestionIndex);
+        } else {
+            alert('No more skipped or unanswered questions.');
+        }
+    });
+    
+    submitQnBtn.addEventListener('click', function() {
+        const question = questions[currentQuestionIndex];
+        if (userAnswers[question.number]) {
+            question.answered = true;
+            question.submitted = true; // Mark the question as submitted
+            highlightCorrectAndIncorrectAnswers(question);
+            submitQnBtn.style.display = 'none';
+            nextBtn.style.display = 'inline-block';
+            finalSubmitBtn.style.display = areAllQuestionsAnswered() ? 'inline-block' : 'none';
+            updateSkippedCount(); // Update skipped count
+        } else {
+            alert('Please select an answer before submitting.');
+        }
+    });
+    
+    finalSubmitBtn.addEventListener('click', function() {
+        const totalQuestions = questions.length;
+        let correctCount = 0;
+        const correctAnswersList = [];
+        const incorrectAnswersList = [];
+
+        questions.forEach(question => {
+            const userAnswer = userAnswers[question.number];
+            if (userAnswer === question.correctAnswer) {
+                correctCount++;
+                correctAnswersList.push(question);
+            } else {
+                incorrectAnswersList.push(question);
+            }
+        });
+
+        const percentage = ((correctCount / totalQuestions) * 100).toFixed(2);
+
+        // Store the result in localStorage
+        const testResults = JSON.parse(localStorage.getItem('testResults') || '{}');
+        testResults['test1'] = {
+            score: correctCount,
+            total: totalQuestions,
+            percentage: percentage,
+            date: new Date().toISOString()
+        };
+        localStorage.setItem('testResults', JSON.stringify(testResults));
+
+        // Display results
+        questionsContainer.style.display = 'none';
+        resultsContainer.style.display = 'block';
+
+        // Display correct answers
+        correctAnswersDiv.innerHTML = `
+            <ul>
+                ${correctAnswersList.map(question => `
+                    <li>
+                        <strong>Question ${question.number}:</strong> ${question.text}
+                        <br>Your Answer: <span class="correct-answer">${userAnswers[question.number]}</span>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+
+        // Display incorrect answers
+        incorrectAnswersDiv.innerHTML = `
+            <ul>
+                ${incorrectAnswersList.map(question => `
+                    <li>
+                        <strong>Question ${question.number}:</strong> ${question.text}
+                        <br>Your Answer: <span class="user-answer">${userAnswers[question.number]}</span>
+                        <br>Correct Answer: <span class="correct-answer">${question.correctAnswer}</span>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+
+        alert(`Test submitted! You scored ${correctCount}/${totalQuestions} (${percentage}%)`);
+    });
+
+    function highlightCorrectAndIncorrectAnswers(question) {
+        document.querySelectorAll(`input[name="q${question.number}"]`).forEach(radio => {
+            const label = document.querySelector(`label[for="q${question.number}_${radio.value}"]`);
+            if (radio.value === question.correctAnswer) {
+                label.classList.add('correct');
+            } else if (radio.checked && radio.value !== question.correctAnswer) {
+                label.classList.add('incorrect');
+            }
+        });
+    }
+
+    function areAllQuestionsAnswered() {
+        return questions.every(question => question.answered || question.skipped);
+    }
+});
+    </script>
+</body>
+</html>
